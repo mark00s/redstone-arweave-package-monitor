@@ -1,0 +1,20 @@
+{
+  "name": "redstone-arweave-package-monitor",
+  "version": "0.0.1",
+  "description": "Lambda that monitors packages send from RedStone Oracle to ArweaveDB",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.11.1",
+    "@types/aws-lambda": "^8.10.145",
+    "eslint": "^9.11.1",
+    "globals": "^15.9.0",
+    "typescript": "<5.6.0",
+    "typescript-eslint": "^8.7.0"
+  }
+}
