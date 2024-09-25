@@ -23,39 +23,29 @@ void main();
 
 async function main() {
     console.log(`RUNNING`)
-    const response = await getJsonFromUrl(ORACLE_NODE_MANIFEST_URL);
-    if (response.statusCode != 200)
+    const oracleResponse = await getJsonFromUrl(ORACLE_NODE_MANIFEST_URL);
+    if (oracleResponse.statusCode != 200)
         return {
-            statusCode: response.statusCode,
-            body: JSON.stringify(response.body)
+            statusCode: oracleResponse.statusCode,
+            body: JSON.stringify(oracleResponse.body)
         }
 
-    const tokens = Object.keys(response.body.tokens);
+    const tokens = Object.keys(oracleResponse.body.tokens);
     console.log(`RUNNING2`)
 
-    // const { loading, data } = useQuery(GET_TRANSACTIONS, { variables: { dataFeeds: ["ETH"], timestamps: ["1727259010"] } })
-    // console.log(`${data}`)
-
-    const query = GetGraphQlTransactionsQuery(["ETH"], ["1727259010"])
-    console.log(query);
-    const resp = await fetch("https://arweave-search.goldsky.com/graphql", {
+    const arweaveResponse = await getJsonFromUrl(ARWEAVE_GRAPHQL_URL, {
         method: 'POST',
 
         headers: {
             "Content-Type": "application/json"
         },
 
-        body: JSON.stringify({ query: query })
-    })
+        body: JSON.stringify({ query: GetGraphQlTransactionsQuery(["ETH"], ["1727259010"]) })
+    });
 
-    const jsonek = await resp.json()
-
-    console.log(jsonek['data']['transactions']['edges']);
-}
-
-async function getJsonFromUrl(url: string) {
+async function getJsonFromUrl(url: string, params = {}) {
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, params);
         return {
             statusCode: response.status,
             body: await response.json(),
