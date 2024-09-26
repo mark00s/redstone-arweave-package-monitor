@@ -18,14 +18,6 @@ export async function GetJsonFromUrl(url: string, params = {}): Promise<HttpReso
     }
 }
 
-export function BatchArray<T>(array: T[], batchSize: number): T[][] {
-    const batches: T[][] = [];
-    for (let i = 0; i < array.length; i += batchSize) {
-        batches.push(array.slice(i, i + batchSize));
-    }
-    return batches;
-}
-
 export function GenerateTimestamps(timeRange: number, delay: number, now: number): string[] {
     const nowRounded = now - (now % 10);
     const end = nowRounded - delay;
@@ -59,6 +51,10 @@ export function GetGraphQlTransactionsQuery(dataFeeds: string[], timestamps: str
         edges {
         node {
             id
+            tags {
+                name
+                value
+            }
         }
         }
     }
