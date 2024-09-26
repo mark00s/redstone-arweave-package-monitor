@@ -18,24 +18,40 @@ export async function GetJsonFromUrl(url: string, params = {}): Promise<HttpReso
     }
 }
 
-export function GetGraphQlTransactionsQuery(dataFeeds: string[], timestamps: string[]): string {
+export function BatchArray<T>(array: T[], batchSize: number): T[][] {
+    const batches: T[][] = [];
+    for (let i = 0; i < array.length; i += batchSize) {
+        batches.push(array.slice(i, i + batchSize));
+    }
+    return batches;
+}
+
+export function GenerateTimestamps(timeRange: number, delay: number, now: number): string[] {
+    const nowRounded = now - (now % 10);
+    const end = nowRounded - delay;
+    const start = end - timeRange;
+
+    var result: string[] = []
+
+    for (var i = start; i < end; i += 10) {
+        result.push(i.toString())
+    }
+
+    return result;
+}
+
+export function GetGraphQlTransactionsQuery(dataFeeds: string[], timestamps: string[], signerAddresses: string[]): string {
     return `
     query {
         transactions(
-            first: 100
+            first: 120
             tags: [
                 { name: "type", values: ["redstone-oracles"] }
                 { name: "dataServiceId", values: ["redstone-primary-prod"] }
                 { name: "timestamp", values: ${JSON.stringify(timestamps)}, op: EQ }
                 {
                     name: "signerAddress"
-                    values: [
-                    "0x8BB8F32Df04c8b654987DAaeD53D6B6091e3B774"
-                    "0xdEB22f54738d54976C4c0fe5ce6d408E40d88499"
-                    "0x51Ce04Be4b3E32572C4Ec9135221d0691Ba7d202"
-                    "0xDD682daEC5A90dD295d14DA4b0bec9281017b5bE"
-                    "0x9c5AE89C4Af6aA32cE58588DBaF90d18a855B6de"
-                    ]
+                    values: ${JSON.stringify(signerAddresses)}
                 }
                 { name: "dataFeedId", values: ${JSON.stringify(dataFeeds)} }
             ]
