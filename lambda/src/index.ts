@@ -23,6 +23,11 @@ export const lambdaHandler: Handler = async (event, context: Context) => {
 void main();
 
 async function main() {
+    const dateNowSeconds = ((new Date).getTime() / 1000);
+    const timestamps = GenerateTimestamps(TIME_RANGE, DELAY, dateNowSeconds);
+    const oracleRegistry = await getOracleRegistryState();
+    const redstonePrimaryNodesAddresses = getSignersForDataServiceId(oracleRegistry, "redstone-primary-prod");
+
     const oracleResponse = await GetJsonFromUrl(ORACLE_NODE_MANIFEST_URL);
 
     if (oracleResponse.statusCode != 200)
@@ -49,21 +54,17 @@ async function main() {
             body: JSON.stringify(arweaveResponse.body)
         }
 
-    var edges: { "node": { "id": string } }[] = arweaveResponse.body['data']['transactions']['edges']
+function checkSignerAddresses(edges: Edge[], requiredSignerAddresses: string[]): CheckResultLike {
+    const foundSignerAddresses = new Set(
+        edges.map(edge =>
+            edge.node.tags.find(tag => tag.name === "signerAddress")?.value
+        ).filter(Boolean)
+    );
 
-    var urls: string[] = []
-    edges.forEach(edge => urls.push(`https://arweave.net/${edge.node.id}`))
+    const missingAddresses = requiredSignerAddresses.filter(address => !foundSignerAddresses.has(address));
 
-    const oracleRegistry = await getOracleRegistryState();
-    const redstonePrimaryNodesAddresses = getSignersForDataServiceId(oracleRegistry, "redstone-primary-prod");
-
-    urls.forEach(async url => {
-        const jsonBody = (await GetJsonFromUrl(url)).body;
-        const signedDataPkg = SignedDataPackage.fromObj(jsonBody);
-        const signerAddress = recoverSignerAddress(signedDataPkg);
-        if (redstonePrimaryNodesAddresses.includes(signerAddress))
-            console.log(`YES: ${url}`)
-        else
-            console.log(`NO: ${url}`)
-    })
+    return {
+        allPresent: missingAddresses.length === 0,
+        missingAddresses
+    };
 }
