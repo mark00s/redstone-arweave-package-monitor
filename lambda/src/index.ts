@@ -47,10 +47,6 @@ async function main() {
             expectedPackages += redstonePrimaryNodesAddresses.length
             var ids = await getIdsWithMetadata(timestamp, redstonePrimaryNodesAddresses, token);
 
-            for (var i = 0; i < ids.length; i++) {
-                ids[i].isSigned = await isPackageSigned(ids[i].id, redstonePrimaryNodesAddresses);
-            }
-
             for (var signer of redstonePrimaryNodesAddresses) {
                 if (IsPackageFromSigner(ids, signer)) {
                     validPackages++;
@@ -110,14 +106,14 @@ async function getIdsWithMetadata(timestamp: string, signerAddresses: string[], 
     const edges = arweaveResponse.body['data']['transactions']['edges'];
     var result: IdWithMetadata[] = []
 
-    edges.forEach((edge: any) => {
+    for (var edge of edges) {
         const id = edge['node']['id']
         //TODO: Check if edge['node']['tags'] is iterable
         const signer = findSignerFromTags(edge['node']['tags']);
+        const isSigned: boolean = await isPackageSigned(id, signerAddresses);
 
-        result.push({ id, signer, timestamp, token, isSigned: false })
+        result.push({ id, signer, timestamp, token, isSigned: isSigned })
     }
-    );
 
     return result;
 }
