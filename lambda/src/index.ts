@@ -5,6 +5,8 @@ import { ARWEAVE_DATA_HOST, ARWEAVE_GRAPHQL_URL, DELAY, ORACLE_NODE_MANIFEST_URL
 import { GenerateTimestamps, GetGraphQlTransactionsQuery, GetJsonFromUrl } from "./etc/helpers.js";
 import { IdWithMetadata } from "./etc/interfaces.js";
 
+var IterateHosts: number = 0;
+
 
 export const lambdaHandler: Handler = async (event, context: Context) => {
     // console.log('EVENT: \n' + JSON.stringify(event, null, 2));
@@ -23,6 +25,7 @@ export const lambdaHandler: Handler = async (event, context: Context) => {
 void main();
 
 async function main() {
+    //TODO: Move it to lambdaHandler before deployment on AWS.
     const dateNowSeconds = ((new Date).getTime() / 1000);
     const timestamps = GenerateTimestamps(TIME_RANGE, DELAY, dateNowSeconds);
     const oracleRegistry = await getOracleRegistryState();
@@ -81,20 +84,28 @@ function IsPackageFromSigner(ids: IdWithMetadata[], signer: string): boolean {
 }
 
 async function isPackageSigned(id: string, redstonePrimaryNodesAddresses: string[]): Promise<boolean> {
-    const url = `${ARWEAVE_DATA_HOST}/${id}`
+    const url = `https://${ARWEAVE_DATA_HOST[IterateHosts]}/${id}`
+    try {
+        const response = await GetJsonFromUrl(url);
+        // TODO: Throw error if not 200
 
-    const response = await GetJsonFromUrl(url);
-    // TODO: Throw error if not 200
+        const signedDataPkg = SignedDataPackage.fromObj(response.body);
+        const signerAddress = recoverSignerAddress(signedDataPkg);
 
-    const signedDataPkg = SignedDataPackage.fromObj(response.body);
-    const signerAddress = recoverSignerAddress(signedDataPkg);
+        return redstonePrimaryNodesAddresses.includes(signerAddress)
+    } catch (error) {
+        console.log(`ERROR: ${error}`)
+        IterateHosts++;
+        //TODO: Beautify it. It is antipattern to recurrence in `catch` block.
+        //TODO: Check for error type. There can be more than TIMEOUT. response.statusCode?
+        if (IterateHosts === ARWEAVE_DATA_HOST.length)
+            throw new RangeError(`Run out of the Data Hosts? Iterator: ${IterateHosts} Length: ${ARWEAVE_DATA_HOST.length}`);
 
-    return redstonePrimaryNodesAddresses.includes(signerAddress)
+        return isPackageSigned(id, redstonePrimaryNodesAddresses);
+    }
 }
 
 async function getIdsWithMetadata(timestamp: string, signerAddresses: string[], token: string): Promise<IdWithMetadata[]> {
-    var ids: string[] = [];
-
     const arweaveResponse = await GetJsonFromUrl(ARWEAVE_GRAPHQL_URL, {
         method: 'POST',
         headers: {
@@ -114,8 +125,6 @@ async function getIdsWithMetadata(timestamp: string, signerAddresses: string[], 
 
         return { id, signer, timestamp, token, isSigned };
     });
-
-
 
     return await Promise.all(promiseEdges);;
 }
