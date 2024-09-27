@@ -94,6 +94,7 @@ async function isPackageSigned(id: string, redstonePrimaryNodesAddresses: string
 
 async function getIdsWithMetadata(timestamp: string, signerAddresses: string[], token: string): Promise<IdWithMetadata[]> {
     var ids: string[] = [];
+
     const arweaveResponse = await GetJsonFromUrl(ARWEAVE_GRAPHQL_URL, {
         method: 'POST',
         headers: {
@@ -103,19 +104,20 @@ async function getIdsWithMetadata(timestamp: string, signerAddresses: string[], 
         body: JSON.stringify({ query: GetGraphQlTransactionsQuery([token], [timestamp], signerAddresses) })
     });
     // TODO: Throw error if not 200
+
     const edges = arweaveResponse.body['data']['transactions']['edges'];
-    var result: IdWithMetadata[] = []
 
-    for (var edge of edges) {
-        const id = edge['node']['id']
-        //TODO: Check if edge['node']['tags'] is iterable
+    const promiseEdges = edges.map(async (edge: any) => {
+        const id = edge['node']['id'];
         const signer = findSignerFromTags(edge['node']['tags']);
-        const isSigned: boolean = await isPackageSigned(id, signerAddresses);
+        const isSigned = await isPackageSigned(id, signerAddresses);
 
-        result.push({ id, signer, timestamp, token, isSigned: isSigned })
-    }
+        return { id, signer, timestamp, token, isSigned };
+    });
 
-    return result;
+
+
+    return await Promise.all(promiseEdges);;
 }
 
 function findSignerFromTags(tags: { name: string, value: string }[]): string {
